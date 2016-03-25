@@ -21,6 +21,7 @@ def deleteMatches():
     DB = connect()
     c = DB.cursor()
     c.execute("DELETE FROM matches;")
+    DB.commit()
     DB.close()
 
 
@@ -30,6 +31,7 @@ def deletePlayers():
     DB = connect()
     c = DB.cursor()
     c.execute("DELETE FROM players;")
+    DB.commit()
     DB.close()
 
 
@@ -38,7 +40,10 @@ def countPlayers():
     DB = connect()
     c = DB.cursor()
     c.execute("SELECT COUNT(*) AS num from players;")
+    results = c.fetchall()
     DB.close()
+    results = results[0][0]
+    return results
 
 
 def registerPlayer(name):
@@ -53,7 +58,8 @@ def registerPlayer(name):
     #register a player to the database
     DB = connect()
     c = DB.cursor()
-    c.execute("INSERT INTO players(name) values('%s')", (name,))
+    c.execute("INSERT INTO players(name) values(%s)", (name,))
+    DB.commit()
     DB.close()
 
   # #sets the cursor to look through the database
@@ -80,6 +86,16 @@ def playerStandings():
         wins: the number of matches the player has won
         matches: the number of matches the player has played
     """
+    DB = connect()
+    c = DB.cursor()
+    c.execute("SELECT players.id, players.name, "
+      "count((SELECT matches.winner from matches where matches.winner = players.id)) as wins, "
+      "count(matches.winner) as matches "
+      "from players left join matches "
+      "on players.id = matches.winner or players.id = matches.loser group by players.id, players.name;")
+    results = c.fetchall()
+    DB.close()
+    return results
 
 
 def reportMatch(winner, loser):
@@ -89,6 +105,12 @@ def reportMatch(winner, loser):
       winner:  the id number of the player who won
       loser:  the id number of the player who lost
     """
+    DB = connect()
+    c = DB.cursor()
+    c.execute("INSERT INTO matches(winner, loser) values(%s, %s)", (winner, loser,))
+    DB.commit()
+    DB.close()
+
  
  
 def swissPairings():
@@ -106,5 +128,22 @@ def swissPairings():
         id2: the second player's unique id
         name2: the second player's name
     """
+
+    DB = connect()
+    c = DB.cursor()
+    c.execute("CREATE OR REPLACE VIEW standings as " 
+      "SELECT players.id, players.name, "
+      "count((SELECT matches.winner from matches where matches.winner = players.id)) as wins, "
+      "count(matches.winner) as matches "
+      "from players left join matches "
+      "on players.id = matches.winner or players.id = matches.loser group by players.id, players.name;")
+    DB.commit()
+    c.execute("SELECT standingsA.id, standingsA.name, standingsA.wins, standingsB.id, standingsB.name, standingsB.wins " 
+      "from standings as standingsA, standings as standingsB "
+      "where standingsA.wins = standingsB.wins and and standingsA.id > standingsB.id;")
+    results = c.fetchall()
+    DB.close
+    return results
+
 
 
