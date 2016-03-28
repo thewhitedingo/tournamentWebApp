@@ -92,7 +92,8 @@ def playerStandings():
       "count((SELECT matches.winner from matches where matches.winner = players.id)) as wins, "
       "count(matches.winner) as matches "
       "from players left join matches "
-      "on players.id = matches.winner or players.id = matches.loser group by players.id, players.name;")
+      "on players.id = matches.winner or players.id = matches.loser group by players.id, players.name "
+      "order by wins desc;")
     results = c.fetchall()
     DB.close()
     return results
@@ -128,22 +129,18 @@ def swissPairings():
         id2: the second player's unique id
         name2: the second player's name
     """
+    standings = playerStandings()
+    num = int(countPlayers())
+    results = []
 
-    DB = connect()
-    c = DB.cursor()
-    c.execute("CREATE OR REPLACE VIEW standings as " 
-      "SELECT players.id, players.name, "
-      "count((SELECT matches.winner from matches where matches.winner = players.id)) as wins, "
-      "count(matches.winner) as matches "
-      "from players left join matches "
-      "on players.id = matches.winner or players.id = matches.loser group by players.id, players.name;")
-    DB.commit()
-    c.execute("SELECT standingsA.id, standingsA.name, standingsA.wins, standingsB.id, standingsB.name, standingsB.wins " 
-      "from standings as standingsA, standings as standingsB "
-      "where standingsA.wins = standingsB.wins and and standingsA.id > standingsB.id;")
-    results = c.fetchall()
-    DB.close
+    if(num>0): 
+      for i in range (num):
+        if (i % 2 == 0):
+          id1 = standings[i][0]
+          name1 = standings[i][1]
+          id2 = standings[i + 1][0]
+          name2 = standings[i + 1][1]
+          results.append((id1, name1, id2, name2))
+
+    print results
     return results
-
-
-
